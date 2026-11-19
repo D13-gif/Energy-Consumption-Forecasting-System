@@ -1,0 +1,450 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Data Explorer{% endblock %}
+{% block breadcrumb_active %}Data Explorer{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h5 class="mb-1">Preview Dataset</h5>
+                <p class="text-muted mb-0">Jelajahi data konsumsi listrik dengan filter dan pagination</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary" id="btn-refresh-data">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form id="filter-form" class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label for="filter-start" class="form-label">Tanggal Mulai</label>
+                        <input type="date" class="form-control form-control-sm" id="filter-start" name="start">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filter-end" class="form-label">Tanggal Akhir</label>
+                        <input type="date" class="form-control form-control-sm" id="filter-end" name="end">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="filter-page-size" class="form-label">Per Halaman</label>
+                        <select class="form-select form-select-sm" id="filter-page-size" name="page_size">
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label d-block invisible">Filter</label>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter me-1"></i>Terapkan
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label d-block invisible">Reset</label>
+                        <button type="button" class="btn btn-outline-secondary w-100" id="btn-reset-filter">
+                            <i class="fas fa-undo me-1"></i>Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-table me-2"></i>Data Preview
+                </h3>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted small" id="data-info">Memuat...</span>
+                    <button type="button" class="btn btn-sm btn-outline-success" id="btn-export-csv" disabled>
+                        <i class="fas fa-download me-1"></i>Export CSV
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" id="data-table-container">
+                    <table class="table table-hover table-striped mb-0" id="data-table">
+                        <thead class="table-light">
+                            <tr id="table-header"></tr>
+                        </thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                </div>
+                <div id="data-loading" class="loading-state d-none"></div>
+                <div id="data-empty" class="empty-state d-none">
+                    <i class="fas fa-table"></i>
+                    <h5>Tidak Ada Data</h5>
+                    <p>Dataset belum dimuat atau tidak ada data yang cocok dengan filter.</p>
+                </div>
+            </div>
+            <div class="card-footer">
+                <nav aria-label="Pagination">
+                    <ul class="pagination pagination-sm justify-content-center mb-0" id="pagination"></ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Validasi & Missing Values
+                </h3>
+            </div>
+            <div class="card-body">
+                <div id="validation-summary">
+                    <div class="loading-state">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mb-0">Memuat ringkasan validasi...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-pie me-2"></i>Distribusi Missing Values
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" id="missing-chart-container">
+                    <canvas id="missingChart"></canvas>
+                </div>
+                <div id="missing-chart-loading" class="loading-state d-none"></div>
+                <div id="missing-chart-empty" class="empty-state d-none">
+                    <i class="fas fa-chart-pie"></i>
+                    <h5>Tidak Ada Data</h5>
+                    <p>Jalankan validasi data terlebih dahulu.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadDataSummary();
+    loadDataPreview();
+    loadValidationSummary();
+    initEventListeners();
+});
+
+function initEventListeners() {
+    document.getElementById('filter-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        loadDataPreview(1);
+    });
+
+    document.getElementById('btn-reset-filter').addEventListener('click', function() {
+        document.getElementById('filter-start').value = '';
+        document.getElementById('filter-end').value = '';
+        document.getElementById('filter-page-size').value = '25';
+        loadDataPreview(1);
+    });
+
+    document.getElementById('btn-refresh-data').addEventListener('click', function() {
+        loadDataSummary();
+        loadDataPreview();
+        loadValidationSummary();
+    });
+
+    document.getElementById('btn-export-csv').addEventListener('click', function() {
+        const start = document.getElementById('filter-start').value;
+        const end = document.getElementById('filter-end').value;
+        const pageSize = document.getElementById('filter-page-size').value;
+        window.open(`/api/data/export?start=${start}&end=${end}&page_size=${pageSize}`, '_blank');
+    });
+}
+
+async function loadDataSummary() {
+    try {
+        const response = await fetch('/api/data/summary');
+        const result = await response.json();
+        if (result.success && result.data) {
+            updateDateInputs(result.data);
+        }
+    } catch (error) {
+        console.error('Error loading data summary:', error);
+    }
+}
+
+function updateDateInputs(data) {
+    if (data.date_range) {
+        document.getElementById('filter-start').min = data.date_range.start.split('T')[0];
+        document.getElementById('filter-start').max = data.date_range.end.split('T')[0];
+        document.getElementById('filter-end').min = data.date_range.start.split('T')[0];
+        document.getElementById('filter-end').max = data.date_range.end.split('T')[0];
+    }
+}
+
+async function loadDataPreview(page = 1) {
+    const container = document.getElementById('data-table-container');
+    const loading = document.getElementById('data-loading');
+    const empty = document.getElementById('data-empty');
+    const table = document.getElementById('data-table');
+    const info = document.getElementById('data-info');
+    const exportBtn = document.getElementById('btn-export-csv');
+
+    loading.classList.remove('d-none');
+    table.style.display = 'none';
+    empty.classList.add('d-none');
+    exportBtn.disabled = true;
+
+    const start = document.getElementById('filter-start').value;
+    const end = document.getElementById('filter-end').value;
+    const pageSize = document.getElementById('filter-page-size').value;
+
+    try {
+        const response = await fetch(`/api/data/preview?page=${page}&page_size=${pageSize}&start=${start}&end=${end}`);
+        const result = await response.json();
+
+        if (result.success && result.data) {
+            renderTable(result.data);
+            renderPagination(result.data.pagination);
+            info.textContent = `Menampilkan ${result.data.pagination.showing_from} - ${result.data.pagination.showing_to} dari ${result.data.pagination.total} record`;
+            exportBtn.disabled = false;
+            table.style.display = 'table';
+        } else {
+            empty.querySelector('p').textContent = result.message || 'Tidak ada data';
+            empty.classList.remove('d-none');
+            info.textContent = 'Tidak ada data';
+        }
+    } catch (error) {
+        console.error('Error loading data preview:', error);
+        empty.querySelector('p').textContent = 'Gagal memuat data: ' + error.message;
+        empty.classList.remove('d-none');
+        info.textContent = 'Error';
+    } finally {
+        loading.classList.add('d-none');
+    }
+}
+
+function renderTable(data) {
+    const header = document.getElementById('table-header');
+    const body = document.getElementById('table-body');
+
+    if (data.columns && data.columns.length > 0) {
+        header.innerHTML = data.columns.map(col => `<th>${col}</th>`).join('');
+    }
+
+    if (data.rows && data.rows.length > 0) {
+        body.innerHTML = data.rows.map(row => {
+            return '<tr>' + data.columns.map(col => {
+                let value = row[col];
+                if (value === null || value === undefined) {
+                    return '<td class="text-muted"><i class="fas fa-minus"></i></td>';
+                }
+                if (typeof value === 'number') {
+                    return `<td class="text-end">${EnergiCast.formatNumber(value, 3)}</td>`;
+                }
+                if (col.toLowerCase().includes('date') || col.toLowerCase().includes('time') || col.toLowerCase().includes('timestamp')) {
+                    return `<td>${EnergiCast.formatDate(value)}</td>`;
+                }
+                return `<td>${value}</td>`;
+            }).join('') + '</tr>';
+        }).join('');
+    } else {
+        body.innerHTML = '<tr><td colspan="' + (data.columns?.length || 1) + '" class="text-center text-muted">Tidak ada data</td></tr>';
+    }
+}
+
+function renderPagination(pagination) {
+    const container = document.getElementById('pagination');
+    if (!pagination || pagination.total_pages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+    const current = pagination.current_page;
+    const total = pagination.total_pages;
+
+    html += `<li class="page-item ${current === 1 ? 'disabled' : ''}"><a class="page-link" href="#" data-page="${current - 1}"><i class="fas fa-chevron-left"></i></a></li>`;
+
+    let start = Math.max(1, current - 2);
+    let end = Math.min(total, current + 2);
+
+    if (start > 1) {
+        html += `<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`;
+        if (start > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+
+    for (let i = start; i <= end; i++) {
+        html += `<li class="page-item ${i === current ? 'active' : ''}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+    }
+
+    if (end < total) {
+        if (end < total - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        html += `<li class="page-item"><a class="page-link" href="#" data-page="${total}">${total}</a></li>`;
+    }
+
+    html += `<li class="page-item ${current === total ? 'disabled' : ''}"><a class="page-link" href="#" data-page="${current + 1}"><i class="fas fa-chevron-right"></i></a></li>`;
+
+    container.innerHTML = html;
+
+    container.querySelectorAll('.page-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const page = parseInt(this.dataset.page);
+            if (page && page !== current) {
+                loadDataPreview(page);
+            }
+        });
+    });
+}
+
+async function loadValidationSummary() {
+    const container = document.getElementById('validation-summary');
+    const chartContainer = document.getElementById('missing-chart-container');
+    const loading = document.getElementById('missing-chart-loading');
+    const empty = document.getElementById('missing-chart-empty');
+
+    try {
+        const response = await fetch('/api/data/validation');
+        const result = await response.json();
+
+        if (result.success && result.data) {
+            renderValidationSummary(result.data);
+            renderMissingChart(result.data.missing_summary);
+            chartContainer.style.display = 'block';
+            empty.classList.add('d-none');
+        } else {
+            container.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h5>Belum Divalidasi</h5><p>${result.message || 'Jalankan validasi data terlebih dahulu.'}</p></div>`;
+            chartContainer.style.display = 'none';
+            empty.classList.remove('d-none');
+        }
+    } catch (error) {
+        console.error('Error loading validation:', error);
+        container.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle text-danger"></i><h5>Error</h5><p>Gagal memuat validasi: ${error.message}</p></div>`;
+        chartContainer.style.display = 'none';
+        empty.classList.remove('d-none');
+    }
+}
+
+function renderValidationSummary(data) {
+    const container = document.getElementById('validation-summary');
+    container.innerHTML = `
+        <div class="row mb-3">
+            <div class="col-6">
+                <div class="p-3 border rounded text-center">
+                    <h4 class="text-primary mb-1">${data.total_rows || 0}</h4>
+                    <small class="text-muted">Total Baris</small>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="p-3 border rounded text-center">
+                    <h4 class="text-info mb-1">${data.total_columns || 0}</h4>
+                    <small class="text-muted">Total Kolom</small>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-6">
+                <div class="p-3 border rounded text-center">
+                    <h4 class="text-success mb-1">${data.valid_rows || 0}</h4>
+                    <small class="text-muted">Baris Valid</small>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="p-3 border rounded text-center">
+                    <h4 class="text-danger mb-1">${data.invalid_rows || 0}</h4>
+                    <small class="text-muted">Baris Invalid</small>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-6">
+                <div class="p-3 border rounded text-center">
+                    <h4 class="text-warning mb-1">${data.duplicate_timestamps || 0}</h4>
+                    <small class="text-muted">Timestamp Duplikat</small>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="p-3 border rounded text-center">
+                    <h4 class="text-secondary mb-1">${(data.missing_percentage || 0).toFixed(2)}%</h4>
+                    <small class="text-muted">Missing Values</small>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+let missingChart = null;
+
+function renderMissingChart(missingSummary) {
+    const ctx = document.getElementById('missingChart');
+    if (!ctx) return;
+
+    if (!missingSummary || Object.keys(missingSummary).length === 0) {
+        document.getElementById('missing-chart-container').style.display = 'none';
+        document.getElementById('missing-chart-empty').classList.remove('d-none');
+        return;
+    }
+
+    const labels = Object.keys(missingSummary);
+    const data = Object.values(missingSummary).map(v => v.missing_count || v.missing || 0);
+
+    if (missingChart) {
+        missingChart.data.labels = labels;
+        missingChart.data.datasets[0].data = data;
+        missingChart.update();
+        return;
+    }
+
+    missingChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Jumlah Missing Values',
+                data: data,
+                backgroundColor: 'rgba(220, 53, 69, 0.8)',
+                borderColor: 'rgb(220, 53, 69)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Jumlah Missing' }
+                },
+                y: {
+                    title: { display: true, text: 'Kolom' }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

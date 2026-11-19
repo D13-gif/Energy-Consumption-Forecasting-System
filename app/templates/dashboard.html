@@ -1,0 +1,497 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Dashboard{% endblock %}
+{% block breadcrumb_active %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="callout callout-info mb-3" role="alert">
+            <h5><i class="fas fa-info-circle me-2"></i>Selamat Datang di EnergiCast</h5>
+            <p class="mb-0">Aplikasi web untuk forecasting konsumsi listrik rumah tangga menggunakan model LSTM. Gunakan menu navigasi di sidebar untuk menjelajahi data, melakukan preprocessing, melatih model, dan melihat prediksi.</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-3 col-md-6 col-sm-6">
+        <div class="card kpi-card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="kpi-icon bg-primary text-white me-3">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted mb-1">Total Record</h6>
+                        <h3 class="mb-0" id="kpi-total-records">-</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-sm-6">
+        <div class="card kpi-card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="kpi-icon bg-success text-white me-3">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted mb-1">Rentang Data</h6>
+                        <h3 class="mb-0" id="kpi-date-range">-</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-sm-6">
+        <div class="card kpi-card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="kpi-icon bg-info text-white me-3">
+                        <i class="fas fa-wave-square"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted mb-1">Frekuensi Data</h6>
+                        <h3 class="mb-0" id="kpi-frequency">-</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-sm-6">
+        <div class="card kpi-card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="kpi-icon bg-warning text-dark me-3">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted mb-1">Status Model</h6>
+                        <h3 class="mb-0" id="kpi-model-status">
+                            <span class="badge bg-secondary">Belum Dilatih</span>
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-line me-2"></i>Konsumsi Listrik Historis
+                </h3>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-primary active" data-range="7d">7 Hari</button>
+                    <button type="button" class="btn btn-outline-primary" data-range="30d">30 Hari</button>
+                    <button type="button" class="btn btn-outline-primary" data-range="90d">90 Hari</button>
+                    <button type="button" class="btn btn-outline-primary" data-range="all">Semua</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" id="historical-chart-container">
+                    <canvas id="historicalChart"></canvas>
+                </div>
+                <div id="historical-chart-loading" class="loading-state d-none">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mb-0">Memuat grafik...</p>
+                </div>
+                <div id="historical-chart-empty" class="empty-state d-none">
+                    <i class="fas fa-chart-line"></i>
+                    <h5>Belum Ada Data</h5>
+                    <p>Jalankan preprocessing terlebih dahulu untuk melihat grafik konsumsi historis.</p>
+                    <a href="{{ url_for('preprocessing.index') }}" class="btn btn-primary">Ke Preprocessing</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-line me-2"></i>Ringkasan Forecast Terbaru
+                </h3>
+            </div>
+            <div class="card-body">
+                <div id="forecast-summary">
+                    <div class="empty-state">
+                        <i class="fas fa-chart-line"></i>
+                        <h5>Belum Ada Forecast</h5>
+                        <p>Latih model terlebih dahulu, lalu buat forecast dari halaman Forecast.</p>
+                        <a href="{{ url_for('training.index') }}" class="btn btn-primary btn-sm me-2">Latih Model</a>
+                        <a href="{{ url_for('forecast.index') }}" class="btn btn-outline-primary btn-sm">Buat Forecast</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-bar me-2"></i>Metrik Model Terakhir
+                </h3>
+            </div>
+            <div class="card-body">
+                <div id="model-metrics">
+                    <div class="empty-state">
+                        <i class="fas fa-chart-bar"></i>
+                        <h5>Belum Ada Metrik</h5>
+                        <p>Metrik akan muncul setelah model dilatih dan dievaluasi.</p>
+                        <a href="{{ url_for('training.index') }}" class="btn btn-primary btn-sm">Latih Model</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-info-circle me-2"></i>Status Sistem
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="p-3 border rounded">
+                            <i class="fas fa-file-csv fa-2x text-primary mb-2"></i>
+                            <h6>Dataset</h6>
+                            <span class="badge bg-secondary" id="status-dataset">Belum Dicek</span>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="p-3 border rounded">
+                            <i class="fas fa-cogs fa-2x text-info mb-2"></i>
+                            <h6>Preprocessing</h6>
+                            <span class="badge bg-secondary" id="status-preprocessing">Belum Dijalankan</span>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="p-3 border rounded">
+                            <i class="fas fa-brain fa-2x text-warning mb-2"></i>
+                            <h6>Model</h6>
+                            <span class="badge bg-secondary" id="status-model">Belum Dilatih</span>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="p-3 border rounded">
+                            <i class="fas fa-chart-line fa-2x text-danger mb-2"></i>
+                            <h6>Forecast</h6>
+                            <span class="badge bg-secondary" id="status-forecast">Belum Dibuat</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardData();
+    initHistoricalChart();
+    loadHistoricalData('7d');
+    initRangeButtons();
+});
+
+async function loadDashboardData() {
+    try {
+        const response = await fetch('/api/dashboard/summary');
+        const result = await response.json();
+        if (result.success && result.data) {
+            updateKPIs(result.data);
+            updateStatusBadges(result.data);
+            updateForecastSummary(result.data.latest_forecast);
+            updateModelMetrics(result.data.latest_metrics);
+        }
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    }
+}
+
+function updateKPIs(data) {
+    const totalRecords = document.getElementById('kpi-total-records');
+    const dateRange = document.getElementById('kpi-date-range');
+    const frequency = document.getElementById('kpi-frequency');
+    const modelStatus = document.getElementById('kpi-model-status');
+
+    if (data.total_records !== undefined) {
+        totalRecords.textContent = EnergiCast.formatNumber(data.total_records, 0);
+    }
+    if (data.date_range) {
+        dateRange.textContent = `${EnergiCast.formatDateShort(data.date_range.start)} - ${EnergiCast.formatDateShort(data.date_range.end)}`;
+    }
+    if (data.frequency) {
+        frequency.textContent = data.frequency;
+    }
+    if (data.model_status) {
+        const badges = {
+            'ready': '<span class="badge bg-success">Siap</span>',
+            'training': '<span class="badge bg-warning text-dark">Training</span>',
+            'error': '<span class="badge bg-danger">Error</span>',
+            'not_trained': '<span class="badge bg-secondary">Belum Dilatih</span>'
+        };
+        modelStatus.innerHTML = badges[data.model_status] || badges['not_trained'];
+    }
+}
+
+function updateStatusBadges(data) {
+    const statusMap = {
+        'dataset': data.dataset_status || 'not_checked',
+        'preprocessing': data.preprocessing_status || 'not_run',
+        'model': data.model_status || 'not_trained',
+        'forecast': data.forecast_status || 'not_created'
+    };
+
+    const badgeMap = {
+        'ready': 'bg-success',
+        'completed': 'bg-success',
+        'not_checked': 'bg-secondary',
+        'not_run': 'bg-secondary',
+        'not_trained': 'bg-secondary',
+        'not_created': 'bg-secondary',
+        'running': 'bg-warning text-dark',
+        'training': 'bg-warning text-dark',
+        'processing': 'bg-warning text-dark',
+        'error': 'bg-danger',
+        'failed': 'bg-danger'
+    };
+
+    const textMap = {
+        'ready': 'Siap',
+        'completed': 'Selesai',
+        'not_checked': 'Belum Dicek',
+        'not_run': 'Belum Dijalankan',
+        'not_trained': 'Belum Dilatih',
+        'not_created': 'Belum Dibuat',
+        'running': 'Berjalan',
+        'training': 'Training',
+        'processing': 'Memproses',
+        'error': 'Error',
+        'failed': 'Gagal'
+    };
+
+    Object.keys(statusMap).forEach(key => {
+        const element = document.getElementById(`status-${key}`);
+        if (element) {
+            const status = statusMap[key];
+            element.className = `badge ${badgeMap[status] || 'bg-secondary'}`;
+            element.textContent = textMap[status] || status;
+        }
+    });
+}
+
+function updateForecastSummary(forecast) {
+    const container = document.getElementById('forecast-summary');
+    if (!forecast) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-chart-line"></i>
+                <h5>Belum Ada Forecast</h5>
+                <p>Latih model terlebih dahulu, lalu buat forecast dari halaman Forecast.</p>
+                <a href="{{ url_for('training.index') }}" class="btn btn-primary btn-sm me-2">Latih Model</a>
+                <a href="{{ url_for('forecast.index') }}" class="btn btn-outline-primary btn-sm">Buat Forecast</a>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="mb-3">
+            <small class="text-muted">Horizon: ${forecast.horizon} jam | Dibuat: ${EnergiCast.formatDate(forecast.created_at)}</small>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th class="text-end">Prediksi (kW)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${forecast.predictions.slice(0, 10).map(p => `
+                        <tr>
+                            <td>${EnergiCast.formatDate(p.timestamp)}</td>
+                            <td class="text-end">${EnergiCast.formatNumber(p.value, 3)}</td>
+                        </tr>
+                    `).join('')}
+                    ${forecast.predictions.length > 10 ? `
+                        <tr>
+                            <td colspan="2" class="text-center text-muted">
+                                ... dan ${forecast.predictions.length - 10} prediksi lainnya
+                            </td>
+                        </tr>
+                    ` : ''}
+                </tbody>
+            </table>
+        </div>
+        <a href="{{ url_for('forecast.index') }}" class="btn btn-sm btn-outline-primary">Lihat Forecast Lengkap</a>
+    `;
+}
+
+function updateModelMetrics(metrics) {
+    const container = document.getElementById('model-metrics');
+    if (!metrics) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-chart-bar"></i>
+                <h5>Belum Ada Metrik</h5>
+                <p>Metrik akan muncul setelah model dilatih dan dievaluasi.</p>
+                <a href="{{ url_for('training.index') }}" class="btn btn-primary btn-sm">Latih Model</a>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="row text-center">
+            <div class="col-4 mb-3">
+                <div class="p-3 border rounded">
+                    <h4 class="text-primary mb-1">${EnergiCast.formatNumber(metrics.mae, 4)}</h4>
+                    <small class="text-muted">MAE (kW)</small>
+                </div>
+            </div>
+            <div class="col-4 mb-3">
+                <div class="p-3 border rounded">
+                    <h4 class="text-warning mb-1">${EnergiCast.formatNumber(metrics.rmse, 4)}</h4>
+                    <small class="text-muted">RMSE (kW)</small>
+                </div>
+            </div>
+            <div class="col-4 mb-3">
+                <div class="p-3 border rounded">
+                    <h4 class="text-danger mb-1">${EnergiCast.formatNumber(metrics.mse, 4)}</h4>
+                    <small class="text-muted">MSE (kW²)</small>
+                </div>
+            </div>
+        </div>
+        <div class="text-center">
+            <small class="text-muted">Dievaluasi pada test set (${metrics.test_samples || '-'} sampel)</small>
+        </div>
+        <a href="{{ url_for('performance.index') }}" class="btn btn-sm btn-outline-primary mt-2">Lihat Detail Performa</a>
+    `;
+}
+
+let historicalChart = null;
+
+function initHistoricalChart() {
+    const ctx = document.getElementById('historicalChart');
+    if (!ctx) return;
+
+    historicalChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Global Active Power (kW)',
+                data: [],
+                borderColor: 'rgb(54, 162, 235)',
+                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                fill: true,
+                tension: 0.1,
+                pointRadius: 0,
+                pointHoverRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: { size: 13 },
+                    bodyFont: { size: 12 }
+                }
+            },
+            scales: {
+                x: {
+                    display: true,
+                    title: { display: true, text: 'Waktu' }
+                },
+                y: {
+                    display: true,
+                    title: { display: true, text: 'Daya Aktif (kW)' },
+                    beginAtZero: false
+                }
+            }
+        }
+    });
+}
+
+function initRangeButtons() {
+    document.querySelectorAll('[data-range]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('[data-range]').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            loadHistoricalData(this.dataset.range);
+        });
+    });
+}
+
+async function loadHistoricalData(range) {
+    const loading = document.getElementById('historical-chart-loading');
+    const empty = document.getElementById('historical-chart-empty');
+    const chartContainer = document.getElementById('historical-chart-container');
+    const canvas = document.getElementById('historicalChart');
+
+    loading.classList.remove('d-none');
+    empty.classList.add('d-none');
+    chartContainer.classList.add('d-none');
+    canvas.style.display = 'none';
+
+    try {
+        const response = await fetch(`/api/dashboard/historical?range=${range}`);
+        const result = await response.json();
+        if (result.success && result.data) {
+            updateHistoricalChart(result.data);
+            chartContainer.classList.remove('d-none');
+            canvas.style.display = 'block';
+            empty.classList.add('d-none');
+        } else {
+            canvas.style.display = 'none';
+            chartContainer.classList.add('d-none');
+            empty.classList.remove('d-none');
+            empty.querySelector('p').textContent =
+                result.message === 'Preprocessing artifacts not found'
+                    ? 'Data olahan belum tersedia. Jalankan preprocessing untuk menampilkan grafik historis.'
+                    : result.message || 'Data historis belum tersedia.';
+        }
+    } catch (error) {
+        console.error('Error loading historical data:', error);
+        canvas.style.display = 'none';
+        chartContainer.classList.add('d-none');
+        empty.classList.remove('d-none');
+        empty.querySelector('p').textContent =
+            'Data historis gagal dimuat. Coba muat ulang halaman.';
+    } finally {
+        loading.classList.add('d-none');
+    }
+}
+
+function updateHistoricalChart(data) {
+    if (!historicalChart) return;
+
+    historicalChart.data.labels = data.timestamps;
+    historicalChart.data.datasets[0].data = data.values;
+    historicalChart.update();
+}
+</script>
+{% endblock %}

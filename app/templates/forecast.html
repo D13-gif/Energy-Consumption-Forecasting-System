@@ -1,0 +1,477 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Forecast{% endblock %}
+{% block breadcrumb_active %}Forecast{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h5 class="mb-1">Forecast Konsumsi Listrik</h5>
+                <p class="text-muted mb-0">Buat prediksi konsumsi listrik untuk masa depan menggunakan model LSTM</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-line me-2"></i>Konfigurasi Forecast
+                </h3>
+            </div>
+            <div class="card-body">
+                <form id="forecast-form">
+                    <div class="mb-3">
+                        <label for="forecast-horizon" class="form-label">Horizon Prediksi (Jam)</label>
+                        <select class="form-select form-select-sm" id="forecast-horizon" name="horizon" required>
+                            <option value="24">24 Jam (1 Hari)</option>
+                            <option value="48">48 Jam (2 Hari)</option>
+                            <option value="72">72 Jam (3 Hari)</option>
+                            <option value="168">168 Jam (1 Minggu)</option>
+                        </select>
+                        <div class="form-text">Pilih horizon yang didukung model</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Model</label>
+                        <select class="form-select form-select-sm" id="forecast-model" name="model_id" disabled>
+                            <option value="">Memuat model...</option>
+                        </select>
+                        <div class="form-text">Model terbaru otomatis dipilih</div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg" id="btn-generate-forecast" disabled>
+                            <i class="fas fa-magic me-1"></i>Generate Forecast
+                        </button>
+                        <button type="button" class="btn btn-outline-success" id="btn-export-forecast" disabled>
+                            <i class="fas fa-download me-1"></i>Export CSV
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-info-circle me-2"></i>Status Model
+                </h3>
+            </div>
+            <div class="card-body">
+                <div id="model-status-forecast">
+                    <div class="loading-state">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mb-0">Memeriksa model...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Catatan Penting
+                </h3>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0 small">
+                    <li>Forecast multi-step recursive dapat mengalami <strong>error accumulation</strong> semakin jauh horizon.</li>
+                    <li>Prediksi didasarkan pada data historis hingga <strong>timestamp terakhir</strong> di dataset.</li>
+                    <li>Model univariate menggunakan <strong>Global_active_power</strong> saja sebagai input.</li>
+                    <li>Hasil forecast <strong>bukan nilai aktual</strong> dan tidak dijamin akurasi.</li>
+                    <li>Pastikan preprocessing dan training sudah selesai sebelum forecast.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Actual vs Predicted vs Forecast
+                </h3>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button class="btn btn-outline-primary active" data-view="eval">Evaluasi (Test Set)</button>
+                    <button type="button" class="btn btn-outline-primary" data-view="future">Forecast Masa Depan</button>
+                    <button type="button" class="btn btn-outline-primary" data-view="both">Gabungan</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container-lg" id="forecast-chart-container">
+                    <canvas id="forecastChart"></canvas>
+                </div>
+                <div id="forecast-chart-loading" class="loading-state d-none">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mb-0">Memuat grafik...</p>
+                </div>
+                <div id="forecast-chart-empty" class="empty-state d-none">
+                    <i class="fas fa-chart-line"></i>
+                    <h5>Belum Ada Forecast</h5>
+                    <p>Klik "Generate Forecast" untuk membuat prediksi.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-table me-2"></i>Tabel Forecast
+                </h3>
+                <span class="badge bg-info" id="forecast-count">0 records</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" id="forecast-table-container">
+                    <table class="table table-hover table-striped mb-0" id="forecast-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>No</th>
+                                <th>Timestamp</th>
+                                <th class="text-end">Prediksi (kW)</th>
+                                <th>Tipe</th>
+                            </tr>
+                        </thead>
+                        <tbody id="forecast-table-body"></tbody>
+                    </table>
+                </div>
+                <div id="forecast-table-empty" class="empty-state d-none">
+                    <i class="fas fa-table"></i>
+                    <h5>Belum Ada Data</h5>
+                    <p>Generate forecast terlebih dahulu.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadModelStatus();
+    initEventListeners();
+});
+
+let forecastChart = null;
+let currentForecastData = null;
+
+function initEventListeners() {
+    document.getElementById('forecast-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        generateForecast();
+    });
+
+    document.getElementById('btn-export-forecast').addEventListener('click', function() {
+        exportForecastCSV();
+    });
+
+    document.querySelectorAll('[data-view]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('[data-view]').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            renderForecastChart(this.dataset.view);
+        });
+    });
+}
+
+async function loadModelStatus() {
+    try {
+        const response = await fetch('/api/model/status');
+        const result = await response.json();
+
+        const container = document.getElementById('model-status-forecast');
+        const modelSelect = document.getElementById('forecast-model');
+        const generateBtn = document.getElementById('btn-generate-forecast');
+
+        if (result.success && result.data && result.data.model_ready) {
+            const data = result.data;
+            container.innerHTML = `
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fas fa-check-circle text-success fa-2x me-3"></i>
+                    <div>
+                        <h5 class="mb-1">Model Siap</h5>
+                        <small class="text-muted">Versi: ${data.model_version || 'latest'}</small>
+                    </div>
+                </div>
+                <div class="row text-center small">
+                    <div class="col-4"><strong>${data.input_shape || '-'}</strong><br><span class="text-muted">Input Shape</span></div>
+                    <div class="col-4"><strong>${data.window_size || '-'}</strong><br><span class="text-muted">Window Size</span></div>
+                    <div class="col-4"><strong>${data.features || 1}</strong><br><span class="text-muted">Features</span></div>
+                </div>
+                <hr>
+                <div class="small text-muted">
+                    <div>Training: ${data.trained_at ? EnergiCast.formatDate(data.trained_at) : '-'}</div>
+                    <div>Metric (Test): MAE ${data.mae?.toFixed(4) || '-'}, RMSE ${data.rmse?.toFixed(4) || '-'}</div>
+                </div>
+            `;
+
+            modelSelect.innerHTML = `<option value="${data.model_id || 'latest'}" selected>Latest Model (${data.model_version || 'v1'})</option>`;
+            modelSelect.disabled = false;
+            generateBtn.disabled = false;
+        } else {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                    <h5>Model Belum Siap</h5>
+                    <p>${result.message || 'Latih model terlebih dahulu di halaman Model Training.'}</p>
+                    <a href="{{ url_for('training.index') }}" class="btn btn-primary btn-sm mt-2">Ke Model Training</a>
+                </div>
+            `;
+            modelSelect.innerHTML = '<option value="">Tidak ada model tersedia</option>';
+            modelSelect.disabled = true;
+            generateBtn.disabled = true;
+        }
+    } catch (error) {
+        console.error('Error loading model status:', error);
+        document.getElementById('model-status-forecast').innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-times-circle text-danger"></i>
+                <h5>Error</h5>
+                <p>Gagal memeriksa status model: ${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+async function generateForecast() {
+    const btn = document.getElementById('btn-generate-forecast');
+    const exportBtn = document.getElementById('btn-export-forecast');
+    const horizon = document.getElementById('forecast-horizon').value;
+    const modelId = document.getElementById('forecast-model').value;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generating...';
+    exportBtn.disabled = true;
+
+    const loading = document.getElementById('forecast-chart-loading');
+    const empty = document.getElementById('forecast-chart-empty');
+    const container = document.getElementById('forecast-chart-container');
+
+    loading.classList.remove('d-none');
+    container.style.display = 'none';
+    empty.classList.add('d-none');
+
+    document.getElementById('forecast-table-empty').classList.add('d-none');
+    document.getElementById('forecast-table-container').style.display = 'none';
+
+    try {
+        const response = await fetch('/api/forecast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ horizon: parseInt(horizon), model_id: modelId })
+        });
+        const result = await response.json();
+
+        if (result.success && result.data) {
+            currentForecastData = result.data;
+            renderForecastChart('both');
+            renderForecastTable(result.data);
+            exportBtn.disabled = false;
+            document.getElementById('forecast-count').textContent = `${result.data.predictions?.length || 0} records`;
+        } else {
+            empty.querySelector('p').textContent = result.message || 'Gagal generate forecast';
+            empty.classList.remove('d-none');
+            alert('Error: ' + (result.message || 'Gagal generate forecast'));
+        }
+    } catch (error) {
+        console.error('Error generating forecast:', error);
+        empty.querySelector('p').textContent = 'Gagal: ' + error.message;
+        empty.classList.remove('d-none');
+        alert('Gagal generate forecast: ' + error.message);
+    } finally {
+        loading.classList.add('d-none');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-magic me-1"></i>Generate Forecast';
+    }
+}
+
+function renderForecastChart(view) {
+    const container = document.getElementById('forecast-chart-container');
+    const empty = document.getElementById('forecast-chart-empty');
+
+    if (!currentForecastData) {
+        container.style.display = 'none';
+        empty.classList.remove('d-none');
+        return;
+    }
+
+    const evalData = currentForecastData.evaluation || {};
+    const futureData = currentForecastData.forecast || {};
+
+    let labels = [];
+    let actualData = [];
+    let predictedData = [];
+    let forecastData = [];
+
+    if (view === 'eval' || view === 'both') {
+        if (evalData.timestamps && evalData.actual && evalData.predicted) {
+            labels = [...labels, ...evalData.timestamps];
+            actualData = [...actualData, ...evalData.actual];
+            predictedData = [...predictedData, ...evalData.predicted];
+        }
+    }
+
+    if (view === 'future' || view === 'both') {
+        if (futureData.timestamps && futureData.values) {
+            labels = [...labels, ...futureData.timestamps];
+            forecastData = [...forecastData, ...futureData.values];
+        }
+    }
+
+    const ctx = document.getElementById('forecastChart');
+    if (!ctx) return;
+
+    const datasets = [];
+
+    if ((view === 'eval' || view === 'both') && actualData.length > 0) {
+        datasets.push({
+            label: 'Actual (Test Set)',
+            data: actualData,
+            borderColor: 'rgb(40, 167, 69)',
+            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+            fill: false,
+            tension: 0.1,
+            pointRadius: 2,
+            pointHoverRadius: 5
+        });
+    }
+
+    if ((view === 'eval' || view === 'both') && predictedData.length > 0) {
+        datasets.push({
+            label: 'Predicted (Test Set)',
+            data: predictedData,
+            borderColor: 'rgb(255, 193, 7)',
+            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+            fill: false,
+            tension: 0.1,
+            pointRadius: 2,
+            pointHoverRadius: 5,
+            borderDash: [5, 5]
+        });
+    }
+
+    if ((view === 'future' || view === 'both') && forecastData.length > 0) {
+        const forecastStartIdx = labels.length - forecastData.length;
+        const forecastDataset = {
+            label: 'Forecast (Future)',
+            data: new Array(forecastStartIdx).fill(null).concat(forecastData),
+            borderColor: 'rgb(220, 53, 69)',
+            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+            fill: true,
+            tension: 0.1,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            pointStyle: 'triangle'
+        };
+        datasets.push(forecastDataset);
+    }
+
+    if (forecastChart) {
+        forecastChart.data.labels = labels;
+        forecastChart.data.datasets = datasets;
+        forecastChart.update();
+        return;
+    }
+
+    forecastChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: true, position: 'top' },
+                tooltip: { backgroundColor: 'rgba(0, 0, 0, 0.8)', padding: 12 }
+            },
+            scales: {
+                x: { display: true, title: { display: true, text: 'Waktu' } },
+                y: { display: true, title: { display: true, text: 'Global Active Power (kW)' }, beginAtZero: false }
+            }
+        }
+    });
+
+    container.style.display = 'block';
+    empty.classList.add('d-none');
+}
+
+function renderForecastTable(data) {
+    const container = document.getElementById('forecast-table-container');
+    const empty = document.getElementById('forecast-table-empty');
+    const body = document.getElementById('forecast-table-body');
+
+    let rows = [];
+
+    if (data.evaluation && data.evaluation.timestamps) {
+        data.evaluation.timestamps.forEach((ts, i) => {
+            rows.push({
+                timestamp: ts,
+                value: data.evaluation.predicted[i],
+                type: 'Predicted (Test)',
+                typeClass: 'badge bg-warning text-dark'
+            });
+        });
+    }
+
+    if (data.forecast && data.forecast.timestamps) {
+        data.forecast.timestamps.forEach((ts, i) => {
+            rows.push({
+                timestamp: ts,
+                value: data.forecast.values[i],
+                type: 'Forecast (Future)',
+                typeClass: 'badge bg-danger'
+            });
+        });
+    }
+
+    if (rows.length === 0) {
+        container.style.display = 'none';
+        empty.classList.remove('d-none');
+        return;
+    }
+
+    body.innerHTML = rows.map((row, i) => `
+        <tr>
+            <td>${i + 1}</td>
+            <td>${EnergiCast.formatDate(row.timestamp)}</td>
+            <td class="text-end">${EnergiCast.formatNumber(row.value, 4)}</td>
+            <td><span class="${row.typeClass}">${row.type}</span></td>
+        </tr>
+    `).join('');
+
+    container.style.display = 'block';
+    empty.classList.add('d-none');
+}
+
+function exportForecastCSV() {
+    if (!currentForecastData) return;
+
+    let csv = 'No,Timestamp,Prediksi_kW,Tipe\n';
+    let rowNum = 1;
+
+    if (currentForecastData.evaluation && currentForecastData.evaluation.timestamps) {
+        currentForecastData.evaluation.timestamps.forEach((ts, i) => {
+            csv += `${rowNum++},${ts},${currentForecastData.evaluation.predicted[i].toFixed(4)},Predicted (Test)\n`;
+        });
+    }
+
+    if (currentForecastData.forecast && currentForecastData.forecast.timestamps) {
+        currentForecastData.forecast.timestamps.forEach((ts, i) => {
+            csv += `${rowNum++},${ts},${currentForecastData.forecast.values[i].toFixed(4)},Forecast (Future)\n`;
+        });
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `energicast_forecast_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+</script>
+{% endblock %}

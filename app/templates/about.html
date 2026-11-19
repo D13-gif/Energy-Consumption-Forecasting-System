@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Tentang EnergiCast{% endblock %}
+{% block breadcrumb_active %}Tentang{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-bolt fa-4x text-primary mb-3"></i>
+                <h2 class="mb-3">EnergiCast</h2>
+                <p class="lead text-muted">Energy Consumption Forecasting System</p>
+                <p class="text-muted">Versi 1.0 | Demo Akademik</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-bullseye me-2"></i>Tujuan Proyek
+                </h3>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li>Mengimplementasikan workflow forecasting time-series menggunakan LSTM (Long Short-Term Memory)</li>
+                    <li>Menyajikan eksplorasi data, hasil preprocessing, training, evaluasi, dan forecasting dalam web UI yang interaktif</li>
+                    <li>Menjadikan proyek mudah dijalankan secara lokal, dipelajari, dan dipresentasikan sebagai portofolio</li>
+                    <li>Menyediakan struktur kode modular, dokumentasi, pengujian, serta reproducible workflow</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-database me-2"></i>Dataset
+                </h3>
+            </div>
+            <div class="card-body">
+                <p><strong>Sumber:</strong> Individual Household Electric Power Consumption (Kaggle / UCI)</p>
+                <p><strong>Target:</strong> Global_active_power (kW)</p>
+                <p><strong>Frekuensi Asli:</strong> Per menit</p>
+                <p><strong>Frekuensi Baseline:</strong> Hourly (rata-rata per jam)</p>
+                <p><strong>Fitur:</strong> Date, Time, Global_active_power, Global_reactive_power, Voltage, Global_intensity, Sub_metering_1/2/3</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-tools me-2"></i>Tech Stack
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <strong>Backend:</strong>
+                        <ul class="mb-0">
+                            <li>Python 3.9+</li>
+                            <li>Flask 2.3+</li>
+                            <li>SQLAlchemy</li>
+                            <li>SQLite</li>
+                        </ul>
+                    </div>
+                    <div class="col-6">
+                        <strong>Machine Learning:</strong>
+                        <ul class="mb-0">
+                            <li>TensorFlow/Keras 2.13+</li>
+                            <li>Scikit-learn</li>
+                            <li>Pandas, NumPy</li>
+                        </ul>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-6">
+                        <strong>Frontend:</strong>
+                        <ul class="mb-0">
+                            <li>AdminLTE 4 (HTML)</li>
+                            <li>Bootstrap 5</li>
+                            <li>Chart.js 4</li>
+                            <li>Vanilla JavaScript</li>
+                        </ul>
+                    </div>
+                    <div class="col-6">
+                        <strong>Lainnya:</strong>
+                        <ul class="mb-0">
+                            <li>Jinja2 Templates</li>
+                            <li>Font Awesome 6</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-list-check me-2"></i>Fitur Utama (P0)
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <ul class="mb-0">
+                            <li>Dashboard Overview</li>
+                            <li>Import/Load Dataset & Validasi</li>
+                            <li>Data Explorer (Filter, Pagination)</li>
+                            <li>Pipeline Preprocessing & Ringkasan</li>
+                            <li>Exploratory Data Analysis (EDA)</li>
+                            <li>Pembentukan Sequence/Window LSTM</li>
+                        </ul>
+                    </div>
+                    <div class="col-6">
+                        <ul class="mb-0">
+                            <li>Training Model LSTM</li>
+                            <li>Evaluasi Model (MAE, RMSE, MSE)</li>
+                            <li>Actual vs Predicted Chart</li>
+                            <li>Forecast Horizon</li>
+                            <li>Model Information & Training History</li>
+                            <li>Error/Loading/Empty States</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Batasan & Catatan
+                </h3>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li><strong>Demo Akademik:</strong> Aplikasi ini untuk pembelajaran dan demonstrasi, bukan sistem pengendalian listrik atau keputusan operasional</li>
+                    <li><strong>Tidak Mengklaim Akurasi:</strong> Prediksi adalah estimasi berbasis model, bukan nilai aktual atau jaminan akurasi</li>
+                    <li><strong>Single Household:</strong> Dataset hanya mencakup satu rumah tangga</li>
+                    <li><strong>Univariate Baseline:</strong> Model dasar hanya menggunakan Global_active_power historis</li>
+                    <li><strong>Recursive Forecast Error:</strong> Forecast multi-step mengalami error accumulation</li>
+                    <li><strong>No Exogenous Variables:</strong> Cuaca, hari libur, musim tidak dimodelkan</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-book me-2"></i>Dokumentasi & Referensi
+                </h3>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li><a href="{{ url_for('info.about') }}#architecture" class="text-decoration-none">Arsitektur Aplikasi</a></li>
+                    <li><a href="{{ url_for('info.about') }}#ml-workflow" class="text-decoration-none">ML Workflow Detail</a></li>
+                    <li><a href="{{ url_for('info.about') }}#api" class="text-decoration-none">API Contract</a></li>
+                    <li>AdminLTE 4 Documentation: <a href="https://adminlte.io/docs/4.0/" target="_blank" class="text-decoration-none">adminlte.io</a></li>
+                    <li>Chart.js Documentation: <a href="https://www.chartjs.org/docs/latest/" target="_blank" class="text-decoration-none">chartjs.org</a></li>
+                    <li>TensorFlow/Keras Guide: <a href="https://www.tensorflow.org/guide/keras" target="_blank" class="text-decoration-none">tensorflow.org</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-code me-2"></i>Struktur Proyek
+                </h3>
+            </div>
+            <div class="card-body">
+                <pre class="bg-dark text-light p-3 rounded small" style="max-height: 400px; overflow: auto;"><code>energicast/
+├── app/
+│   ├── __init__.py          # Flask app factory
+│   ├── config.py            # Konfigurasi
+│   ├── extensions.py        # Ekstensi (SQLAlchemy)
+│   ├── routes/              # Blueprint routes
+│   │   ├── dashboard.py
+│   │   ├── data.py
+│   │   ├── preprocessing.py
+│   │   ├── eda.py
+│   │   ├── training.py
+│   │   ├── forecast.py
+│   │   ├── performance.py
+│   │   └── info.py
+│   ├── services/            # Business logic
+│   ├── repositories/        # Data access
+│   ├── utils/               # Utilities
+│   ├── templates/           # Jinja2 templates
+│   └── static/              # CSS, JS, images
+├── ml/                      # ML pipeline modules
+│   ├── data_loader.py
+│   ├── preprocessing.py
+│   ├── windowing.py
+│   ├── model_builder.py
+│   ├── trainer.py
+│   ├── evaluator.py
+│   └── forecaster.py
+├── data/
+│   ├── raw/                 # Dataset mentah
+│   └── processed/           # Data hasil preprocessing
+├── artifacts/
+│   ├── models/              # Model artifacts
+│   ├── scalers/             # Scaler artifacts
+│   ├── plots/               # Generated plots
+│   └── metadata/            # Metadata JSON
+├── instance/                # SQLite database
+├── tests/                   # Unit & integration tests
+├── scripts/                 # CLI scripts
+├── docs/                    # Documentation
+├── requirements.txt
+├── run.py
+└── README.md</code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h5><i class="fas fa-info-circle me-2"></i>Cara Menjalankan</h5>
+            <ol class="mb-0">
+                <li>Install dependencies: <code>pip install -r requirements.txt</code></li>
+                <li>Letakkan dataset <code>household_power_consumption.txt</code> di folder <code>energicast/data/raw/</code></li>
+                <li>Jalankan aplikasi: <code>python run.py</code></li>
+                <li>Buka browser: <code>http://localhost:5000</code></li>
+                <li>Ikuti alur: Data Explorer → Preprocessing → Model Training → Model Performance → Forecast</li>
+            </ol>
+        </div>
+    </div>
+</div>
+{% endblock %}

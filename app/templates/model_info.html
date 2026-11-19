@@ -1,0 +1,380 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Model Information{% endblock %}
+{% block breadcrumb_active %}Model Information{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h5 class="mb-1">Model Information</h5>
+                <p class="text-muted mb-0">Detail arsitektur, parameter, dan metadata model LSTM</p>
+            </div>
+            <button type="button" class="btn btn-outline-primary" id="btn-refresh-model-info">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-project-diagram me-2"></i>Arsitektur Model
+                </h3>
+            </div>
+            <div class="card-body" id="model-architecture">
+                <div class="loading-state">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mb-0">Memuat arsitektur...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-cogs me-2"></i>Hyperparameter
+                </h3>
+            </div>
+            <div class="card-body" id="model-hyperparams">
+                <div class="loading-state">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mb-0">Memuat hyperparameter...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-ruler me-2"></i>Input / Output
+                </h3>
+            </div>
+            <div class="card-body" id="model-io">
+                <div class="loading-state">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mb-0">Memuat info I/O...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-database me-2"></i>Preprocessing & Scaler
+                </h3>
+            </div>
+            <div class="card-body" id="model-preprocessing">
+                <div class="loading-state">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mb-0">Memuat info preprocessing...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-clock me-2"></i>Training Metadata
+                </h3>
+            </div>
+            <div class="card-body" id="model-metadata">
+                <div class="loading-state">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mb-0">Memuat metadata...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-graduation-cap me-2"></i>Tentang LSTM & Workflow
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="lstm-accordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading-lstm">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-lstm" aria-expanded="false" aria-controls="collapse-lstm">
+                                Apa itu LSTM?
+                            </button>
+                        </h2>
+                        <div id="collapse-lstm" class="accordion-collapse collapse" aria-labelledby="heading-lstm" data-bs-parent="#lstm-accordion">
+                            <div class="accordion-body">
+                                <p><strong>Long Short-Term Memory (LSTM)</strong> adalah jenis Recurrent Neural Network (RNN) yang dirancang untuk mengatasi masalah <em>vanishing gradient</strong> pada RNN konvensional.</p>
+                                <p>LSTM memiliki <strong>cell state</strong> dan tiga <strong>gate</strong> (forget gate, input gate, output gate) yang mengontrol aliran informasi, memungkinkan jaringan belajar ketergantungan jangka panjang dalam data sequential.</p>
+                                <p>Dalam EnergiCast, LSTM digunakan untuk memprediksi <code>Global_active_power</code> berdasarkan sequence historis konsumsi listrik.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading-workflow">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-workflow" aria-expanded="false" aria-controls="collapse-workflow">
+                                Workflow Model EnergiCast
+                            </button>
+                        </h2>
+                        <div id="collapse-workflow" class="accordion-collapse collapse" aria-labelledby="heading-workflow" data-bs-parent="#lstm-accordion">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li><strong>Load Data:</strong> Baca dataset household power consumption (per menit)</li>
+                                    <li><strong>Preprocessing:</strong> Parse timestamp, handle missing, agregasi ke hourly</li>
+                                    <li><strong>Split Kronologis:</strong> 70% train, 15% val, 15% test (tidak random)</li>
+                                    <li><strong>Scaling:</strong> Fit scaler hanya pada train, transform val/test</li>
+                                    <li><strong>Windowing:</strong> Sliding window (default 24 timesteps) → target next step</li>
+                                    <li><strong>Model:</strong> 1 LSTM layer (32 units) → Dense(1), MSE loss, Adam optimizer</li>
+                                    <li><strong>Training:</strong> Early stopping (patience=5), restore best weights</li>
+                                    <li><strong>Evaluasi:</strong> MAE, RMSE, MSE pada test set (inverse transform ke unit asli)</li>
+                                    <li><strong>Forecast:</strong> Recursive multi-step prediction untuk horizon masa depan</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading-limitations">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-limitations" aria-expanded="false" aria-controls="collapse-limitations">
+                                Keterbatasan & Catatan
+                            </button>
+                        </h2>
+                        <div id="collapse-limitations" class="accordion-collapse collapse" aria-labelledby="heading-limitations" data-bs-parent="#lstm-accordion">
+                            <div class="accordion-body">
+                                <ul>
+                                    <li><strong>Univariate baseline:</strong> Hanya menggunakan Global_active_power historis, tidak memanfaatkan fitur lain (voltage, intensity, sub-metering)</li>
+                                    <li><strong>Recursive forecasting:</strong> Error accumulation semakin besar pada horizon panjang</li>
+                                    <li><strong>No exogenous variables:</strong> Cuaca, hari libur, musim tidak dimodelkan</li>
+                                    <li><strong>Single household:</strong> Dataset hanya satu rumah tangga, tidak generalisasi ke populasi</li>
+                                    <li><strong>Stationarity assumption:</strong> Tidak ada differencing atau detrending eksplisit</li>
+                                    <li><strong>Baseline configuration:</strong> Hyperparameter default tidak dioptimalkan (untuk demo/learning)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadModelInfo();
+    document.getElementById('btn-refresh-model-info').addEventListener('click', loadModelInfo);
+});
+
+async function loadModelInfo() {
+    try {
+        const response = await fetch('/api/model/info');
+        const result = await response.json();
+
+        if (result.success && result.data) {
+            renderArchitecture(result.data);
+            renderHyperparams(result.data);
+            renderIO(result.data);
+            renderPreprocessing(result.data);
+            renderMetadata(result.data);
+        } else {
+            renderEmptyInfo(result.message);
+        }
+    } catch (error) {
+        console.error('Error loading model info:', error);
+        renderEmptyInfo('Gagal memuat: ' + error.message);
+    }
+}
+
+function renderEmptyInfo(message) {
+    const containers = ['model-architecture', 'model-hyperparams', 'model-io', 'model-preprocessing', 'model-metadata'];
+    containers.forEach(id => {
+        document.getElementById(id).innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-info-circle"></i>
+                <h5>Belum Ada Info</h5>
+                <p>${message || 'Latih model terlebih dahulu.'}</p>
+            </div>
+        `;
+    });
+}
+
+function renderArchitecture(data) {
+    const container = document.getElementById('model-architecture');
+
+    if (!data.architecture) {
+        container.innerHTML = '<div class="empty-state small"><i class="fas fa-project-diagram"></i><p>Arsitektur tidak tersedia</p></div>';
+        return;
+    }
+
+    const arch = data.architecture;
+
+    let html = `
+        <div class="mb-3">
+            <h6>Model Summary</h6>
+            <pre class="bg-light p-3 rounded small" style="max-height: 300px; overflow: auto;">${arch.summary || 'Tidak tersedia'}</pre>
+        </div>
+    `;
+
+    if (arch.layers && arch.layers.length > 0) {
+        html += `
+            <h6>Layers</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead class="table-light">
+                        <tr><th>Layer</th><th>Type</th><th>Output Shape</th><th>Params</th></tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        arch.layers.forEach(layer => {
+            html += `
+                <tr>
+                    <td><code>${layer.name || '-'}</code></td>
+                    <td>${layer.type || '-'}</td>
+                    <td><code>${layer.output_shape || '-'}</code></td>
+                    <td class="text-end">${layer.params !== undefined ? EnergiCast.formatNumber(layer.params, 0) : '-'}</td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table></div>';
+    }
+
+    if (arch.total_params !== undefined) {
+        html += `<div class="mt-2"><strong>Total Parameters: </strong>${EnergiCast.formatNumber(arch.total_params, 0)}</div>`;
+    }
+    if (arch.trainable_params !== undefined) {
+        html += `<div><strong>Trainable Parameters: </strong>${EnergiCast.formatNumber(arch.trainable_params, 0)}</div>`;
+    }
+
+    container.innerHTML = html;
+}
+
+function renderHyperparams(data) {
+    const container = document.getElementById('model-hyperparams');
+
+    if (!data.hyperparams) {
+        container.innerHTML = '<div class="empty-state small"><i class="fas fa-cogs"></i><p>Hyperparameter tidak tersedia</p></div>';
+        return;
+    }
+
+    const h = data.hyperparams;
+
+    container.innerHTML = `
+        <table class="table table-sm table-borderless">
+            <tbody>
+                <tr><td>LSTM Units</td><td class="text-end"><code>${h.lstm_units || '-'}</code></td></tr>
+                <tr><td>Dropout Rate</td><td class="text-end"><code>${h.dropout || '-'}</code></td></tr>
+                <tr><td>Epochs (Max)</td><td class="text-end"><code>${h.epochs || '-'}</code></td></tr>
+                <tr><td>Batch Size</td><td class="text-end"><code>${h.batch_size || '-'}</code></td></tr>
+                <tr><td>Learning Rate</td><td class="text-end"><code>${h.learning_rate || '-'}</code></td></tr>
+                <tr><td>Patience (Early Stopping)</td><td class="text-end"><code>${h.patience || '-'}</code></td></tr>
+                <tr><td>Loss Function</td><td class="text-end"><code>${h.loss || '-'}</code></td></tr>
+                <tr><td>Optimizer</td><td class="text-end"><code>${h.optimizer || '-'}</code></td></tr>
+                <tr><td>Window Size</td><td class="text-end"><code>${h.window_size || '-'}</code></td></tr>
+            </tbody>
+        </table>
+    `;
+}
+
+function renderIO(data) {
+    const container = document.getElementById('model-io');
+
+    if (!data.io_info) {
+        container.innerHTML = '<div class="empty-state small"><i class="fas fa-ruler"></i><p>I/O info tidak tersedia</p></div>';
+        return;
+    }
+
+    const io = data.io_info;
+
+    container.innerHTML = `
+        <div class="row mb-3">
+            <div class="col-6">
+                <div class="p-3 border rounded">
+                    <h6 class="text-primary">Input</h6>
+                    <table class="table table-sm table-borderless mb-0">
+                        <tbody>
+                            <tr><td>Shape</td><td class="text-end"><code>${io.input_shape || '-'}</code></td></tr>
+                            <tr><td>Features</td><td class="text-end"><code>${io.n_features || 1}</code></td></tr>
+                            <tr><td>Window Length</td><td class="text-end"><code>${io.window_size || '-'}</code></td></tr>
+                            <tr><td>Feature Names</td><td><code>${io.feature_names?.join(', ') || 'Global_active_power'}</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="p-3 border rounded">
+                    <h6 class="text-success">Output</h6>
+                    <table class="table table-sm table-borderless mb-0">
+                        <tbody>
+                            <tr><td>Shape</td><td class="text-end"><code>${io.output_shape || '-'}</code></td></tr>
+                            <tr><td>Target</td><td><code>${io.target_name || 'Global_active_power'}</code></td></tr>
+                            <tr><td>Unit</td><td class="text-end"><code>${io.target_unit || 'kW'}</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderPreprocessing(data) {
+    const container = document.getElementById('model-preprocessing');
+
+    if (!data.preprocessing) {
+        container.innerHTML = '<div class="empty-state small"><i class="fas fa-database"></i><p>Preprocessing info tidak tersedia</p></div>';
+        return;
+    }
+
+    const p = data.preprocessing;
+
+    container.innerHTML = `
+        <table class="table table-sm table-borderless">
+            <tbody>
+                <tr><td>Aggregation Frequency</td><td class="text-end"><code>${p.aggregation_freq || 'hourly'}</code></td></tr>
+                <tr><td>Missing Strategy</td><td class="text-end"><code>${p.missing_strategy || 'interpolate'}</code></td></tr>
+                <tr><td>Scaler Type</td><td class="text-end"><code>${p.scaler_type || 'minmax'}</code></td></tr>
+                <tr><td>Train/Val/Test Split</td><td class="text-end"><code>${p.train_ratio || 0.7}/${p.val_ratio || 0.15}/${p.test_ratio || 0.15}</code></td></tr>
+                <tr><td>Window Size</td><td class="text-end"><code>${p.window_size || 24}</code></td></tr>
+                <tr><td>Features Used</td><td><code>${p.features_used?.join(', ') || 'Global_active_power'}</code></td></tr>
+            </tbody>
+        </table>
+        ${p.scaler_params ? `
+            <hr>
+            <h6>Scaler Parameters</h6>
+            <pre class="bg-light p-2 rounded small">${JSON.stringify(p.scaler_params, null, 2)}</pre>
+        ` : ''}
+    `;
+}
+
+function renderMetadata(data) {
+    const container = document.getElementById('model-metadata');
+
+    if (!data.metadata) {
+        container.innerHTML = '<div class="empty-state small"><i class="fas fa-clock"></i><p>Metadata tidak tersedia</p></div>';
+        return;
+    }
+
+    const m = data.metadata;
+
+    container.innerHTML = `
+        <table class="table table-sm table-borderless">
+            <tbody>
+                <tr><td>Model Version</td><td class="text-end"><code>${m.model_version || 'v1.0'}</code></td></tr>
+                <tr><td>Training Timestamp</td><td>${m.trained_at ? EnergiCast.formatDate(m.trained_at) : '-'}</td></tr>
+                <tr><td>Training Duration</td><td class="text-end"><code>${m.duration_seconds ? m.duration_seconds.toFixed(1) + 's' : '-'}</code></td></tr>
+                <tr><td>Best Epoch</td><td class="text-end"><code>${m.best_epoch || '-'}</code></td></tr>
+                <tr><td>Best Val Loss</td><td class="text-end"><code>${m.best_val_loss !== undefined ? m.best_val_loss.toFixed(6) : '-'}</code></td></tr>
+                <tr><td>Final Train Loss</td><td class="text-end"><code>${m.final_train_loss !== undefined ? m.final_train_loss.toFixed(6) : '-'}</code></td></tr>
+                <tr><td>Dataset Version/Hash</td><td class="text-end"><code>${m.dataset_hash || '-'}</code></td></tr>
+                <tr><td>Artifacts Path</td><td><code>${m.artifacts_path || '-'}</code></td></tr>
+            </tbody>
+        </table>
+    `;
+}
+</script>
+{% endblock %}
